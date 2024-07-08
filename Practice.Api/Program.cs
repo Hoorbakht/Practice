@@ -1,25 +1,39 @@
+using Microsoft.EntityFrameworkCore;
+using Practice.Business;
+using Practice.DataAccess;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddControllers()
+	.Services
+	.AddHealthChecks()
+	.Services
+	.AddEndpointsApiExplorer()
+	.AddSwaggerGen()
+	.AddScoped<IPersonBusiness, PersonBusiness>()
+	.AddDbContextPool<PracticeContext>(option => option.UseInMemoryDatabase("Practice"), 2048);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+await using var scope = app.Services.CreateAsyncScope();
+
+await using var context = scope.ServiceProvider.GetRequiredService<PracticeContext>();
+
+await context.Database.EnsureCreatedAsync();
+
 if (app.Environment.IsDevelopment())
-{
-	app.UseSwagger();
-	app.UseSwaggerUI();
-}
+	app.UseSwagger()
+		.UseSwaggerUI();
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
+app.UseHttpsRedirection()
+	.UseHsts();
 
 app.MapControllers();
+app.MapHealthChecks("HealthChecks");
 
-app.Run();
+await app.RunAsync();
+
+
+public partial class Program
+{
+}
